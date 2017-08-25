@@ -23,7 +23,7 @@ public class InAppWebView extends CordovaPlugin {
     private static final String LOG_TAG = "InAppWebView";
 
     private String errorFile = null;
-    private String failingUrl;
+    private static String  failingUrl;
 
     private String jsFile = null;
     private String jsLoader = null;
