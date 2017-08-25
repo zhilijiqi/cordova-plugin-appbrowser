@@ -13,8 +13,7 @@
 
 	<platform name="android">
        	<js-module name="inappwebview" src="www/inappwebview.js">
-			<clobbers target="cordova.InAppWebView.load" />
-            <clobbers target="window.load" />
+			<clobbers target="cordova.InAppWebView" />
 		</js-module>
 		<config-file parent="/*" target="res/xml/config.xml">
 			<feature name="InAppWebView">
