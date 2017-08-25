@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plugin id="cordova-plugin-inappwebview" version="1.0.0" xmlns="http://apache.org/cordova/ns/plugins/1.0">
+	<name>InAppWebView</name>
+	<description>Cordova InAppBrowser Plugin</description>
+    <license>Apache 2.0</license>
+    <keywords>cordova,app,in,webview</keywords>
+    <repo>https://github.com/zhilijiqi/cordova-plugin-inappwebview.git</repo>
+    <issue>https://github.com/zhilijiqi/cordova-plugin-inappwebview/issues</issue>
+
+     <engines>
+      <engine name="cordova" version=">=3.1.0" /><!-- Needs cordova/urlutil -->
+    </engines>
+
+	<platform name="android">
+       	<js-module name="inappwebview" src="www/inappwebview.js">
+			<clobbers target="cordova.InAppWebView.load" />
+            <clobbers target="window.load" />
+		</js-module>
+		<config-file parent="/*" target="res/xml/config.xml">
+			<feature name="InAppWebView">
+				<param name="android-package" value="org.apache.cordova.inappwebview.InAppWebView" />
+				<param name="onload" value="true" />
+			</feature>
+		</config-file>
+		<source-file src="src/android/InAppWebView.java" target-dir="src/org/apache/cordova/inappwebview" />
+	</platform>
+</plugin>  

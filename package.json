@@ -1,0 +1,35 @@
+{
+  "name": "cordova-plugin-inappwebview",
+  "version": "1.0.0",
+  "description": "Cordova InAppBrowser Plugin",
+  "cordova": {
+    "id": "cordova-plugin-inappwebview",
+    "platforms": [
+      "android"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhilijiqi/cordova-plugin-inappwebview.git"
+  },
+  "keywords": [
+    "cordova",
+    "app",
+    "in",
+    "webview",
+    "ecosystem:cordova",
+    "cordova-android"
+  ],
+  "engines": [
+    {
+      "name": "cordova",
+      "version": ">=3.1.0"
+    }
+  ],
+  "author": "Feng",
+  "license": "Apache 2.0",
+  "bugs": {
+    "url": "https://github.com/zhilijiqi/cordova-plugin-inappwebview/issues"
+  },
+  "homepage": "https://github.com/zhilijiqi/cordova-plugin-inappwebview#readme"
+}
