@@ -27,8 +27,8 @@ public class InAppWebView extends CordovaPlugin {
 
     private static final String LOG_TAG = "InAppWebView";
     private static String dataDirPrefixPath = "file:///android_asset/www/";
-    private boolean isFixDir = false;
-    private int checkCounter = 0;
+    private static boolean isFixDir = false;
+    private static int checkCounter = 0;
     private String launchPage = "index.html";
 
     private String errorFile = null;
@@ -39,7 +39,7 @@ public class InAppWebView extends CordovaPlugin {
 
     private String urlFlag = null;
     private String urlRewriteHost = null;
-    private Map<String,String> htmlMap = new HashMap<String,String>();
+    private static Map<String,String> htmlMap = new HashMap<String,String>();
 
 
     @Override
