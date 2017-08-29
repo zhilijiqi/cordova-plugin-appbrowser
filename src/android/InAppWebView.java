@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
-import android.webkit.WebView;
 
 import org.apache.cordova.CordovaArgs;
 import org.apache.cordova.CordovaPlugin;
@@ -16,9 +15,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
-import java.lang.reflect.Proxy;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * This class echoes a string called from JavaScript.
@@ -28,7 +28,7 @@ public class InAppWebView extends CordovaPlugin {
     private static final String LOG_TAG = "InAppWebView";
     private static String dataDirPrefixPath = "file:///android_asset/www/";
     private boolean isFixDir = false;
-    private int checkCounter = 0,checkMaxCounter=2;
+    private int checkCounter = 0;
     private String launchPage = "index.html";
 
     private String errorFile = null;
@@ -37,9 +37,9 @@ public class InAppWebView extends CordovaPlugin {
     private String jsFile = null;
     private String jsLoader = null;
 
-    private String urlFlag = null;
+    private static String urlFlag = null;
     private String urlFlagHost = null;
-    private List<String> localFiles = null;
+    private Map<String,String> localHtmlMap = new HashMap<String,String>();
 
 
     @Override
@@ -61,9 +61,9 @@ public class InAppWebView extends CordovaPlugin {
             buf.append("app.type='text/javascript';");
             buf.append("app.async = true;");
             buf.append("app.src = '"+jsFile+"';");
-            buf.append("var js = document.getElementsByTagName('script');");
-            buf.append("if(js==undefined ){d.body.appendChild(app);return;}");
-            buf.append("var s = js[0];");
+            buf.append("var jtag = d.getElementsByTagName('script');");
+            buf.append("if(jtag == undefined){d.body.appendChild(app);return;}");
+            buf.append("var s = jtag[0];");
             buf.append("s.parentNode.insertBefore(app, s);");
             buf.append("})(document);");
             jsLoader = buf.toString();
@@ -79,13 +79,10 @@ public class InAppWebView extends CordovaPlugin {
     }
     @Override
     public Uri remapUri(Uri uri) {
-
-        //System.out.println(uri);
-
         if(uri.toString().indexOf("app.js")>-1){
-            System.out.println(uri);
-            uri = Uri.fromFile(new File( dataDirPrefixPath + "app.js"));
-            return uri;
+            LOG.i(LOG_TAG,"remapUri-"+uri);
+            /*uri = Uri.fromFile(new File( dataDirPrefixPath + "app.js"));
+            return uri;*/
         }
         return null;
     }
@@ -105,10 +102,12 @@ public class InAppWebView extends CordovaPlugin {
                 LOG.e(LOG_TAG,e.getMessage());
             }
         }else if("onPageFinished".equals(id)){
+            LOG.i(LOG_TAG,"onPageFinished-"+id);
             if(jsLoader != null && jsLoader.length() > 0) {
                 injectDeferredObject(jsLoader, null);
             }
         }else if("onPageStarted".equals(id)){
+            LOG.i(LOG_TAG,"onPageStarted-"+id);
             checkPrefixPath(data.toString());
             return checkUrlFlag(data.toString());
         }
@@ -119,12 +118,37 @@ public class InAppWebView extends CordovaPlugin {
         if(isFixDir){
            return;
         }
-        if(checkCounter < checkMaxCounter){
+        if(checkCounter < 2){
             dataDirPrefixPath = url.substring(0,url.indexOf(launchPage));
             checkCounter++;
         }else{
             isFixDir=true;
             updatePath();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    //cordova.getActivity().getApplicationContext().getDir();
+                    String wwwPath = dataDirPrefixPath.replace("file://","");
+                    if(wwwPath.endsWith("/")){
+                        wwwPath =  wwwPath.substring(0,wwwPath.length()-1);
+                    }
+                    File wwwDir = new File(wwwPath);
+                    if(wwwDir.exists() && wwwDir.isDirectory()){
+                        String []htmls = wwwDir.list(new FilenameFilter() {
+                            @Override
+                            public boolean accept(File dir, String name) {
+                                if(name.endsWith(".html")){
+                                    return true;
+                                }
+                                return false;
+                            }
+                        });
+                        for(String name:htmls){
+                            localHtmlMap.put(name,dataDirPrefixPath+name);
+                        }
+                    }
+                }
+            }).start();
         }
     }
 
@@ -142,7 +166,7 @@ public class InAppWebView extends CordovaPlugin {
             if(url.indexOf("?")>-1){
                 url = url + "&" + urlFlag;
             }else{
-                url = url + "?" +urlFlag;
+                url = url + "?" + urlFlag;
             }
             final String newUrl = url + "t=" + System.currentTimeMillis();
             cordova.getActivity().runOnUiThread(new Runnable() {
@@ -158,7 +182,8 @@ public class InAppWebView extends CordovaPlugin {
 
     @Override
     public Boolean shouldAllowNavigation(String url) {
-        if(urlFlag==null || !url.startsWith("http") || url.indexOf(urlFlag) >- 1){
+        LOG.i(LOG_TAG,"shouldAllowNavigation-"+url);
+        /*if(urlFlag==null || !url.startsWith("http") || url.indexOf(urlFlag) >- 1){
             return true;
         }else{
             if(url.indexOf("?")>-1){
@@ -176,7 +201,61 @@ public class InAppWebView extends CordovaPlugin {
             });
         }
         return false;
+        */
+        return null;
     }
+
+    public Boolean shouldAllowRequest(String url) {
+        LOG.i(LOG_TAG,"shouldAllowRequest-"+url);
+
+        return null;
+    }
+
+    /**
+     * 是否打开系统浏览器
+     * @param url
+     * @return
+     */
+    @Override
+    public Boolean shouldOpenExternalUrl(String url) {
+        LOG.i(LOG_TAG,"shouldOpenExternalUrl-"+url);
+        return null;
+    }
+
+    public boolean onOverrideUrlLoading(String url) {
+        LOG.i(LOG_TAG,"onOverrideUrlLoading-"+url);
+        if(url.indexOf("dfhfax.com")>-1){
+
+            Uri uri = Uri.parse(url);
+            LOG.i(LOG_TAG,"onOverrideUrlLoading-uri.getPath-"+uri.getPath());
+            LOG.i(LOG_TAG,"onOverrideUrlLoading-uri.getQuery-"+uri.getQuery());
+            String path = uri.getPath();
+            if(!path.endsWith(".html")){
+                return false;
+            }
+            if(path.startsWith("/")){
+                path = path.substring(1,path.length());
+            }
+             String lf = localHtmlMap.get(path);
+            if(lf != null){
+                lf =  lf + "?" + uri.getQuery();
+            }
+            final String fileUrl = lf;
+            if(fileUrl != null){
+                cordova.getActivity().runOnUiThread(new Runnable() {
+                    @SuppressLint("NewApi")
+                    @Override
+                    public void run() {
+                        webView.loadUrlIntoView(fileUrl,false);
+                    }
+                });
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void injectDeferredObject(String source, String jsWrapper) {
         if (webView!=null) {
             String scriptToInject;
