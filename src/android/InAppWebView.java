@@ -3,7 +3,7 @@ package org.apache.cordova.inappwebview;
 import android.annotation.SuppressLint;
 import android.net.Uri;
 import android.os.Build;
-import android.util.Log;
+import android.widget.Toast;
 
 import org.apache.cordova.CordovaArgs;
 import org.apache.cordova.CordovaPlugin;
@@ -17,7 +17,11 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,6 +34,7 @@ public class InAppWebView extends CordovaPlugin {
     private static boolean isFixDir = false;
     private static int checkCounter = 0;
     private String launchPage = "index.html";
+    private static String networkType = "";
 
     private String errorFile = null;
     private static String failingUrl;
@@ -40,6 +45,8 @@ public class InAppWebView extends CordovaPlugin {
     private String urlFlag = null;
     private String urlRewriteHost = null;
     private static Map<String,String> htmlMap = new HashMap<String,String>();
+
+    private final static List<String> historyUrls = new ArrayList<String>();
 
 
     @Override
@@ -72,9 +79,9 @@ public class InAppWebView extends CordovaPlugin {
         urlRewriteHost = preferences.getString("UrlRewriteHost", null);
         try {
             String [] files= cordova.getActivity().getAssets().list("www");
-            Log.d(LOG_TAG,files.toString());
+            LOG.d(LOG_TAG,files.toString());
         } catch (IOException e) {
-            Log.e(LOG_TAG,e.getMessage());
+            LOG.e(LOG_TAG,e.getMessage());
         }
     }
     @Override
@@ -89,32 +96,46 @@ public class InAppWebView extends CordovaPlugin {
 
     @Override
     public Object onMessage(String id, Object data) {
-        if ("onReceivedError".equals(id)) {
-            JSONObject d = (JSONObject)data;
+        LOG.d(LOG_TAG,this.toString());
 
+        if("onPageStarted".equals(id)){
+            LOG.d(LOG_TAG,"onPageStarted-"+data.toString());
+            doUpdateVisitedHistory(data.toString(),false);
+
+            checkPrefixPath(data.toString());
+            return setHttpUrlFlag(data.toString());
+        }else if("onPageFinished".equals(id)){
+            LOG.d(LOG_TAG,"onPageFinished-"+data.toString());
+            if(jsLoader != null && jsLoader.length() > 0) {
+                injectDeferredObject(jsLoader, null);
+            }
+        }else if("networkconnection".equals(id)){
+            if("none".equals(data.toString())) {
+                networkType = data.toString();
+                showToast("无法获取网络信息");
+            }
+        }else if("onReceivedError".equals(id)) {
+            JSONObject d = (JSONObject)data;
             try {
                 int code = d.getInt("errorCode");
                 if(code ==-2 || code == -6){
+                    if(code == -2){
+                        showToast("无法获取网络信息");
+                    }else if(code == -6){
+                        showToast("网络连接超时");
+                    }
                     this.onReceivedError(d.getInt("errorCode"), d.getString("description"), d.getString("url"));
                     return data;
                 }
             } catch (JSONException e) {
                 LOG.e(LOG_TAG,e.getMessage());
             }
-        }else if("onPageFinished".equals(id)){
-            LOG.d(LOG_TAG,"onPageFinished-"+data.toString());
-            if(jsLoader != null && jsLoader.length() > 0) {
-                injectDeferredObject(jsLoader, null);
-            }
-        }else if("onPageStarted".equals(id)){
-            LOG.d(LOG_TAG,"onPageStarted-"+data.toString());
-            checkPrefixPath(data.toString());
-            return setHttpUrlFlag(data.toString());
         }
         return null;
     }
 
     private void checkPrefixPath(String url){
+        LOG.d(LOG_TAG,this.toString());
         if(!isFixDir) {
             if (checkCounter < 2 && url.startsWith("file://") && url.contains(launchPage)) {
                 dataDirPrefixPath = url.substring(0, url.indexOf(launchPage));
@@ -122,7 +143,7 @@ public class InAppWebView extends CordovaPlugin {
                 isFixDir = true;
             }
             checkCounter++;
-            Log.d(LOG_TAG,"checkCounter"+checkCounter);
+            LOG.d(LOG_TAG,"checkCounter"+checkCounter);
             updatePath();
             new Thread(new Runnable() {
                 @Override
@@ -131,7 +152,7 @@ public class InAppWebView extends CordovaPlugin {
                     try {
                         htmls = cordova.getActivity().getAssets().list("www");
                     }catch (IOException e){
-                        Log.e(LOG_TAG,e.getMessage());
+                        LOG.e(LOG_TAG,e.getMessage());
                     }
                     String wwwPath = dataDirPrefixPath.replace("file://", "");
                     if (wwwPath.endsWith("/")) {
@@ -175,6 +196,7 @@ public class InAppWebView extends CordovaPlugin {
                 url = url + "?" + urlFlag;
             }
             final String newUrl = url + "&t=" + System.currentTimeMillis();
+            doUpdateVisitedHistory(url,true);
             cordova.getActivity().runOnUiThread(new Runnable() {
                 @SuppressLint("NewApi")
                 @Override
@@ -188,6 +210,7 @@ public class InAppWebView extends CordovaPlugin {
 
     @Override
     public Boolean shouldAllowNavigation(String url) {
+        LOG.d(LOG_TAG,this.toString());
         LOG.d(LOG_TAG,"shouldAllowNavigation-"+url);
         /*if(urlFlag==null || !url.startsWith("http") || url.indexOf(urlFlag) >- 1){
             return true;
@@ -212,6 +235,7 @@ public class InAppWebView extends CordovaPlugin {
     }
 
     public Boolean shouldAllowRequest(String url) {
+        LOG.d(LOG_TAG,this.toString());
         LOG.d(LOG_TAG,"shouldAllowRequest-"+url);
         return null;
     }
@@ -228,12 +252,12 @@ public class InAppWebView extends CordovaPlugin {
     }
 
     public boolean onOverrideUrlLoading(String url) {
+        LOG.d(LOG_TAG,this.toString());
         LOG.d(LOG_TAG,"onOverrideUrlLoading-"+url);
         if(url.contains(urlRewriteHost)){
 
             Uri uri = Uri.parse(url);
-            LOG.i(LOG_TAG,"onOverrideUrlLoading-uri.getPath-"+uri.getPath());
-            LOG.i(LOG_TAG,"onOverrideUrlLoading-uri.getQuery-"+uri.getQuery());
+            LOG.i(LOG_TAG,"onOverrideUrlLoading-uri.getPath-"+uri.getPath()+" ,uri.getQuery-"+uri.getQuery());
             String path = uri.getPath();
             if(!path.endsWith(".html")){
                 return false;
@@ -297,7 +321,7 @@ public class InAppWebView extends CordovaPlugin {
             // Load URL on UI thread
             cordova.getActivity().runOnUiThread(new Runnable() {
                 public void run() {
-                    webView.loadUrlIntoView(errorFile,true);
+                    webView.loadUrlIntoView(errorFile,false);
                 }
             });
         }
@@ -311,9 +335,7 @@ public class InAppWebView extends CordovaPlugin {
             pluginResult.setKeepCallback(true);
             callbackContext.sendPluginResult(pluginResult);
             return true;
-        }
-
-        if ("load".equals(action)) {
+        }else if ("load".equals(action)) {
             String l = args.getString(0);
             boolean isInnerRes = args.getBoolean(1);
             if(isInnerRes){
@@ -324,12 +346,61 @@ public class InAppWebView extends CordovaPlugin {
                 cordova.getActivity().runOnUiThread(new Runnable() {
                     public void run() {
                         webView.clearHistory();
-                        webView.loadUrlIntoView(loadUrl,true);
+                        webView.loadUrlIntoView(loadUrl,false);
+                    }
+                });
+            }
+            return true;
+        }else if ("goBack".equals(action)) {
+            int num = args.getInt(0);
+            final String loadUrl = getLashVisitedHistory();
+            if(loadUrl!=null && loadUrl.length()>0){
+                cordova.getActivity().runOnUiThread(new Runnable() {
+                    public void run() {
+                        webView.loadUrlIntoView(loadUrl,false);
                     }
                 });
             }
             return true;
         }
         return false;
+    }
+
+    /**
+     * 显示提示信息
+     * @param msg
+     */
+    private void showToast(String msg){
+        Toast.makeText(cordova.getActivity().getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * 检查网络状态
+     * @return
+     */
+    private boolean checkNetWorkInfo(){
+        if("none".equals(networkType)){
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 更新浏览器记录
+     * @param url
+     * @param isReload
+     */
+    public void doUpdateVisitedHistory(String url,boolean isReload) {
+        if(isReload && !historyUrls.isEmpty()){
+            historyUrls.remove(historyUrls.size()-1);
+        }
+        historyUrls.add(url);
+    }
+
+    public String getLashVisitedHistory() {
+        if(!historyUrls.isEmpty()){
+            return null;
+        }
+        return historyUrls.remove(historyUrls.size()-1);
     }
 }
