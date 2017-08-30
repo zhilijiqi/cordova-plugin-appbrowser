@@ -3,6 +3,7 @@ package org.apache.cordova.inappwebview;
 import android.annotation.SuppressLint;
 import android.net.Uri;
 import android.os.Build;
+import android.text.TextUtils;
 import android.widget.Toast;
 
 import org.apache.cordova.CordovaArgs;
@@ -270,7 +271,7 @@ public class InAppWebView extends CordovaPlugin {
                 lf =  lf + "?" + uri.getQuery();
             }
             final String fileUrl = lf;
-            if(fileUrl != null){
+            if(!TextUtils.isEmpty(fileUrl)){
                 cordova.getActivity().runOnUiThread(new Runnable() {
                     @SuppressLint("NewApi")
                     @Override
@@ -353,8 +354,8 @@ public class InAppWebView extends CordovaPlugin {
             return true;
         }else if ("goBack".equals(action)) {
             int num = args.getInt(0);
-            final String loadUrl = getLashVisitedHistory();
-            if(loadUrl!=null && loadUrl.length()>0){
+            final String loadUrl = getLastVisitedHistory();
+            if(!TextUtils.isEmpty(loadUrl)){
                 cordova.getActivity().runOnUiThread(new Runnable() {
                     public void run() {
                         webView.loadUrlIntoView(loadUrl,false);
@@ -397,8 +398,12 @@ public class InAppWebView extends CordovaPlugin {
         historyUrls.add(url);
     }
 
-    public String getLashVisitedHistory() {
-        if(!historyUrls.isEmpty()){
+    public String getLastVisitedHistory() {
+        if(historyUrls.isEmpty()){
+            return null;
+        }
+        historyUrls.remove(historyUrls.size()-1);
+        if(historyUrls.isEmpty()){
             return null;
         }
         return historyUrls.remove(historyUrls.size()-1);
