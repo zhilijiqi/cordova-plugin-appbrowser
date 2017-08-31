@@ -19,9 +19,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -55,9 +53,10 @@ public class InAppWebView extends CordovaPlugin {
         super.initialize(cordova, webView);
 
         String errorPage = preferences.getString("UrlError", "errorPage.html");
-        if(errorPage != null){
+        if(TextUtils.isEmpty(errorFile)){
             errorFile = errorPage;
         }
+
         jsFile = preferences.getString("LoadJsFile", "app.js");
         if(jsFile != null){
             StringBuffer buf = new StringBuffer();
