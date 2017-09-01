@@ -261,12 +261,13 @@ public class InAppWebView extends CordovaPlugin {
             Uri uri = Uri.parse(url);
             LOG.i(LOG_TAG,"onOverrideUrlLoading-uri.getPath-"+uri.getPath()+" ,uri.getQuery-"+uri.getQuery());
             String path = uri.getPath();
-            if(!path.endsWith(".html")){
+            if(TextUtils.isEmpty(path) || !path.endsWith(".html")){
                 return false;
             }
-            if(path.startsWith("/")){
-                path = path.substring(1,path.length());
+            while(path.startsWith("/")){
+                path = path.substring(1 , path.length());
             }
+
             String lf = htmlMap.get(path);
             if(lf != null){
                 lf =  lf + "?" + uri.getQuery();
