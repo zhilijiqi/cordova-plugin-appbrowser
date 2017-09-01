@@ -18,9 +18,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -45,17 +43,18 @@ public class InAppWebView extends CordovaPlugin {
     private String urlRewriteHost = null;
     private static Map<String,String> htmlMap = new HashMap<String,String>();
 
-    private final static List<String> historyUrls = new ArrayList<String>();
+    private VisitedHistory visitedHistory = null;
 
 
     @Override
     protected void pluginInitialize() {
         super.initialize(cordova, webView);
 
-        String errorPage = preferences.getString("UrlError", "errorPage.html");
+        String errorPage = preferences.getString("UrlError", "appError.html");
         if(TextUtils.isEmpty(errorFile)){
             errorFile = errorPage;
         }
+        visitedHistory = new VisitedHistory(preferences);
 
         jsFile = preferences.getString("LoadJsFile", "app.js");
         if(jsFile != null){
@@ -100,7 +99,7 @@ public class InAppWebView extends CordovaPlugin {
 
         if("onPageStarted".equals(id)){
             LOG.d(LOG_TAG,"onPageStarted-"+data.toString());
-            doUpdateVisitedHistory(data.toString(),false);
+            visitedHistory.doUpdateVisitedHistory(data.toString(),false);
 
             checkPrefixPath(data.toString());
             return setHttpUrlFlag(data.toString());
@@ -130,9 +129,12 @@ public class InAppWebView extends CordovaPlugin {
             } catch (JSONException e) {
                 LOG.e(LOG_TAG,e.getMessage());
             }
+        }else if("WebViewEngine".equals(id)){
+            doWebViewEngine(data.toString());
         }
         return null;
     }
+
 
     private void checkPrefixPath(String url){
         LOG.d(LOG_TAG,this.toString());
@@ -196,7 +198,7 @@ public class InAppWebView extends CordovaPlugin {
                 url = url + "?" + urlFlag;
             }
             final String newUrl = url + "&t=" + System.currentTimeMillis();
-            doUpdateVisitedHistory(url,true);
+            visitedHistory.doUpdateVisitedHistory(url,true);
             cordova.getActivity().runOnUiThread(new Runnable() {
                 @SuppressLint("NewApi")
                 @Override
@@ -353,7 +355,7 @@ public class InAppWebView extends CordovaPlugin {
             return true;
         }else if ("goBack".equals(action)) {
             int num = args.getInt(0);
-            final String loadUrl = getLastVisitedHistory();
+            final String loadUrl = visitedHistory.getLastVisitedHistory();
             if(!TextUtils.isEmpty(loadUrl)){
                 cordova.getActivity().runOnUiThread(new Runnable() {
                     public void run() {
@@ -366,6 +368,24 @@ public class InAppWebView extends CordovaPlugin {
         return false;
     }
 
+    /**
+     * 处理
+     * @param action
+     */
+    public void doWebViewEngine(String action){
+        if("goBack".equals(action)){
+            final String url = visitedHistory.getLastVisitedHistory();
+            if(!TextUtils.isEmpty(url)){
+                cordova.getActivity().runOnUiThread(new Runnable() {
+                    public void run() {
+                        webView.loadUrlIntoView(url,false);
+                    }
+                });
+            }else{
+                webView.getPluginManager().postMessage("exit",null);
+            }
+        }
+    }
     /**
      * 显示提示信息
      * @param msg
@@ -383,28 +403,5 @@ public class InAppWebView extends CordovaPlugin {
             return false;
         }
         return true;
-    }
-
-    /**
-     * 更新浏览器记录
-     * @param url
-     * @param isReload
-     */
-    public void doUpdateVisitedHistory(String url,boolean isReload) {
-        if(isReload && !historyUrls.isEmpty()){
-            historyUrls.remove(historyUrls.size()-1);
-        }
-        historyUrls.add(url);
-    }
-
-    public String getLastVisitedHistory() {
-        if(historyUrls.isEmpty()){
-            return null;
-        }
-        historyUrls.remove(historyUrls.size()-1);
-        if(historyUrls.isEmpty()){
-            return null;
-        }
-        return historyUrls.remove(historyUrls.size()-1);
     }
 }
