@@ -8,7 +8,17 @@ var InAppWebView = {
     	},
         load: function (eventname) {
             exec(null, null, "InAppWebView", "load", []);
+        },
+        goBack:function (i) {
+           exec(null, null, "InAppWebView", "goBack", [i]);
         }
 };
 
-module.exports = InAppWebView;
+window.history.back=InAppWebView.goBack;
+history.back=InAppWebView.goBack;
+window.history.go=InAppWebView.goBack;
+history.go=InAppWebView.goBack;
+
+
+window.history.go=function(i){
+}
