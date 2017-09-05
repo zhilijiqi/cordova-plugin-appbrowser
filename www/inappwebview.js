@@ -18,7 +18,3 @@ window.history.back=InAppWebView.goBack;
 history.back=InAppWebView.goBack;
 window.history.go=InAppWebView.goBack;
 history.go=InAppWebView.goBack;
-
-
-window.history.go=function(i){
-}
