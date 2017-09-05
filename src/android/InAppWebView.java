@@ -138,7 +138,7 @@ public class InAppWebView extends CordovaPlugin {
             }
             final String newUrl = url + "&t=" + System.currentTimeMillis();
             //移除最后一个记录
-            visitedHistory.getLastVisitedHistory();
+            visitedHistory.removeLastHistory();
             cordova.getActivity().runOnUiThread(new Runnable() {
                 @SuppressLint("NewApi")
                 @Override
