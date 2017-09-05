@@ -15,12 +15,6 @@ import org.apache.cordova.PluginResult;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.File;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * This class echoes a string called from JavaScript.
  */
@@ -91,7 +85,7 @@ public class InAppWebView extends CordovaPlugin {
             visitedHistory.doUpdateVisitedHistory(data.toString(),false);
             cacheLocalHtml.doCheckUpdateCache(data.toString());
 
-            return setHttpUrlFlag(data.toString());
+            return rewriteHttpUrlFlag(data.toString());
         }else if("onPageFinished".equals(id)){
             if(jsLoader != null && jsLoader.length() > 0) {
                 injectDeferredObject(jsLoader, null);
@@ -124,7 +118,12 @@ public class InAppWebView extends CordovaPlugin {
     }
 
 
-    private Boolean setHttpUrlFlag(String url) {
+    /**
+     * 重写URL,增加标示
+     * @param url
+     * @return
+     */
+    private Boolean rewriteHttpUrlFlag(String url) {
         if(urlFlag == null || !url.startsWith("http") || url.contains(urlFlag)){
             return null;
         }else{
@@ -138,7 +137,8 @@ public class InAppWebView extends CordovaPlugin {
                 url = url + "?" + urlFlag;
             }
             final String newUrl = url + "&t=" + System.currentTimeMillis();
-            visitedHistory.doUpdateVisitedHistory(url,true);
+            //移除最后一个记录
+            visitedHistory.getLastVisitedHistory();
             cordova.getActivity().runOnUiThread(new Runnable() {
                 @SuppressLint("NewApi")
                 @Override
@@ -152,13 +152,11 @@ public class InAppWebView extends CordovaPlugin {
 
     @Override
     public Boolean shouldAllowNavigation(String url) {
-        LOG.d(LOG_TAG,this.toString());
         LOG.d(LOG_TAG,"shouldAllowNavigation-"+url);
         return null;
     }
 
     public Boolean shouldAllowRequest(String url) {
-        LOG.d(LOG_TAG,this.toString());
         LOG.d(LOG_TAG,"shouldAllowRequest-"+url);
         return null;
     }
@@ -174,10 +172,14 @@ public class InAppWebView extends CordovaPlugin {
         return null;
     }
 
+    /**
+     * 外部页面跳转到app内部页面
+     * @param url           The URL that is trying to be loaded in the Cordova webview.
+     * @return
+     */
     public boolean onOverrideUrlLoading(String url) {
-        LOG.d(LOG_TAG,"onOverrideUrlLoading-"+url);
+        LOG.d(LOG_TAG,"onOverrideUrlLoading:"+url);
         if(url.contains(urlRewriteHost)){
-
             Uri uri = Uri.parse(url);
             String path = uri.getPath();
             if(TextUtils.isEmpty(path) || !path.endsWith(".html")){
