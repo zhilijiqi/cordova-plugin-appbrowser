@@ -3,7 +3,9 @@ package org.apache.cordova.inappwebview;
 import org.apache.cordova.CordovaPreferences;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by admin on 2017/9/1.
@@ -12,11 +14,14 @@ import java.util.List;
 public class VisitedHistory {
 
     private List<String> historyUrls = new ArrayList<String>();
-
-    private String notKeep = "login.html";
+    private Set<String> ignoreUrls = new HashSet<String>();
 
     public VisitedHistory(CordovaPreferences preferences){
-        notKeep = preferences.getString("HistoryNotKeep","login.html");
+        //忽略文件记录
+        String needIgnore = preferences.getString("VisitedHistoryIgnores","appError.html,hfcgxt.cn");
+        for (String ig:needIgnore.split(",")){
+            ignoreUrls.add(ig);
+        }
     }
     /**
      * 更新浏览器记录
@@ -32,6 +37,9 @@ public class VisitedHistory {
         }
     }
 
+    public void doIgnoreHistory(String url){
+        ignoreUrls.add(url);
+    }
     /**
      * 上次浏览记录
      * @return
@@ -44,7 +52,20 @@ public class VisitedHistory {
         if(historyUrls.isEmpty()){
             return null;
         }
-        return removeLastHistory();
+        String history = "";
+        boolean isFind = true;
+        //是否忽略
+        while(isFind){
+            history = removeLastHistory();
+            isFind = false;
+            for(String ig:ignoreUrls){
+                if(history.contains(ig)){
+                    isFind = true;
+                    break;
+                }
+            }
+        }
+        return history;
     }
 
     /**
@@ -66,8 +87,19 @@ public class VisitedHistory {
         if(historyUrls.isEmpty()){
             return true;
         }
+        //是否忽略
+        /*for(String ig:ignoreUrls){
+            boolean match = url.contains(ig);
+            if(match){
+               return false;
+            }
+        }*/
+        //是否刷新,刷新不保存
+        if(historyUrls.get(historyUrls.size()-1).equals(url)){
+            return false;
+        }
         //登录页面不记录
-        if(url.contains(notKeep) && !historyUrls.get(historyUrls.size()-1).contains("index.html")){
+        if(url.contains("login.html") && !historyUrls.get(historyUrls.size()-1).contains("index.html")){
             removeLastHistory();
             //return false;
         }
