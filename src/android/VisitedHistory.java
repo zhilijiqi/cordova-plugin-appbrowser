@@ -18,7 +18,7 @@ public class VisitedHistory {
 
     public VisitedHistory(CordovaPreferences preferences){
         //忽略文件记录
-        String needIgnore = preferences.getString("VisitedHistoryIgnores","appError.html,hfcgxt.cn");
+        String needIgnore = preferences.getString("VisitedHistoryIgnores","");
         for (String ig:needIgnore.split(",")){
             ignoreUrls.add(ig);
         }
