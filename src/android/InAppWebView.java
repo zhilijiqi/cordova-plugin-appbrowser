@@ -14,6 +14,7 @@ import org.apache.cordova.LOG;
 import org.apache.cordova.PluginResult;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.w3c.dom.Text;
 
 /**
  * This class echoes a string called from JavaScript.
@@ -48,8 +49,8 @@ public class InAppWebView extends CordovaPlugin {
         if(cacheLocalHtml == null) {
             cacheLocalHtml = new CacheLocalHtml(cordova.getActivity());
         }
-        jsFile = preferences.getString("LoadJsFile", "app.js");
-        if(jsFile != null){
+        jsFile = preferences.getString("LoadJsFile", null);
+        if(!TextUtils.isEmpty(jsFile)){
             StringBuffer buf = new StringBuffer();
             //jsWrapper = "(function(d) { var c = d.createElement('script'); c.src = %s; d.body.appendChild(c); })(document)";
             buf.append("var _app = _app || [];");
