@@ -88,7 +88,8 @@ public class InAppWebView extends CordovaPlugin {
 
             return rewriteHttpUrlFlag(data.toString());
         }else if("onPageFinished".equals(id)){
-            if(jsLoader != null && jsLoader.length() > 0) {
+            if(data.toString().startsWith("file://") &&
+                    !TextUtils.isEmpty(jsLoader)) {
                 injectDeferredObject(jsLoader, null);
             }
         }else if("networkconnection".equals(id)){
