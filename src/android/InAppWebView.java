@@ -1,20 +1,24 @@
 package org.apache.cordova.inappwebview;
 
 import android.annotation.SuppressLint;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.text.TextUtils;
+import android.view.Window;
 import android.widget.Toast;
 
 import org.apache.cordova.CordovaArgs;
+import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
 
 import org.apache.cordova.LOG;
 import org.apache.cordova.PluginResult;
+import org.apache.cordova.inappwebview.view.PageLoadingProgress;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.w3c.dom.Text;
 
 /**
  * This class echoes a string called from JavaScript.
@@ -36,10 +40,13 @@ public class InAppWebView extends CordovaPlugin {
 
     private static VisitedHistory visitedHistory = null;
     private static CacheLocalHtml cacheLocalHtml = null;
+    //页面载入
+    private static PageLoadingProgress pageLoadingProgress = null;
 
     @Override
     protected void pluginInitialize() {
         super.initialize(cordova, webView);
+        setWindowBackGround();
 
         urlError = preferences.getString("UrlError", "appError.html");
 
@@ -48,6 +55,9 @@ public class InAppWebView extends CordovaPlugin {
         }
         if(cacheLocalHtml == null) {
             cacheLocalHtml = new CacheLocalHtml(cordova.getActivity());
+        }
+        if(pageLoadingProgress == null) {
+            pageLoadingProgress = new PageLoadingProgress();
         }
         jsFile = preferences.getString("LoadJsFile", null);
         if(!TextUtils.isEmpty(jsFile)){
@@ -70,6 +80,8 @@ public class InAppWebView extends CordovaPlugin {
         urlFlag = preferences.getString("UrlFlag", "app=1");
         urlRewriteHost = preferences.getString("UrlRewriteHost", null);
     }
+
+
     @Override
     public Uri remapUri(Uri uri) {
         if(uri.toString().indexOf("app.js")>-1){
@@ -86,12 +98,16 @@ public class InAppWebView extends CordovaPlugin {
             visitedHistory.doUpdateVisitedHistory(data.toString(),false);
             cacheLocalHtml.doCheckUpdateCache(data.toString());
 
+            if(data.toString().startsWith("http")) {
+                pageLoadingProgress.show(cordova.getActivity());
+            }
             return rewriteHttpUrlFlag(data.toString());
         }else if("onPageFinished".equals(id)){
             if(data.toString().startsWith("file://") &&
                     !TextUtils.isEmpty(jsLoader)) {
                 injectDeferredObject(jsLoader, null);
             }
+            pageLoadingProgress.close(cordova.getActivity());
         }else if("networkconnection".equals(id)){
             if("none".equals(data.toString())) {
                 networkType = data.toString();
@@ -242,6 +258,7 @@ public class InAppWebView extends CordovaPlugin {
         }
     }
 
+
     public void onReceivedError(final int errorCode, final String description, final String failingUrl) {
         final String errorFile = cacheLocalHtml.getByName(urlError);
 
@@ -322,5 +339,12 @@ public class InAppWebView extends CordovaPlugin {
             return false;
         }
         return true;
+    }
+
+    /**
+     * 更新背景色
+     */
+    public void setWindowBackGround(){
+        cordova.getActivity().getWindow().setBackgroundDrawable(new ColorDrawable(Color.WHITE));
     }
 }
