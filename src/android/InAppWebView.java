@@ -5,6 +5,8 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Message;
 import android.text.TextUtils;
 import android.view.Window;
 import android.widget.Toast;
@@ -42,6 +44,9 @@ public class InAppWebView extends CordovaPlugin {
     private static CacheLocalHtml cacheLocalHtml = null;
     //页面载入
     private static PageLoadingProgress pageLoadingProgress = null;
+
+    private static boolean exitApp = false;
+    private final static int IGNORE_EXIT_APP = 1;
 
     @Override
     protected void pluginInitialize() {
@@ -318,7 +323,13 @@ public class InAppWebView extends CordovaPlugin {
                     }
                 });
             }else{
-                webView.getPluginManager().postMessage("exit",null);
+                if(exitApp){
+                    webView.getPluginManager().postMessage("exit",null);
+                }else{
+                    exitApp = true;
+                    showToast("再次点击退出");
+                    this.handler.sendEmptyMessageDelayed(IGNORE_EXIT_APP , 1000);
+                }
             }
         }
     }
@@ -347,4 +358,17 @@ public class InAppWebView extends CordovaPlugin {
     public void setWindowBackGround(){
         cordova.getActivity().getWindow().setBackgroundDrawable(new ColorDrawable(Color.WHITE));
     }
+
+    Handler handler = new Handler(){
+        @Override
+        public void handleMessage(Message msg){
+            switch (msg.what){
+                case IGNORE_EXIT_APP:
+                    exitApp = false;
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
 }
